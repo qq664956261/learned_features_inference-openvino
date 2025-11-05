@@ -2,7 +2,7 @@
 #include <chrono>
 #include "extractor.h"
 
-#define IMAGE_WIDTH 800
+#define IMAGE_WIDTH 640
 #define IMAGE_HEIGHT 400
 int descriptor_dim = 64;
 int descriptor_width = IMAGE_WIDTH;
@@ -87,7 +87,14 @@ int main(int argc, char const *argv[])
 
     net_ptr->run(image, score_map, desc_map);
     key_points = nms(score_map, 500, 0.01, 16, cv::Mat());
+
     desc = bilinear_interpolation(image.cols, image.rows, desc_map, key_points);
+    for (size_t i = 0; i < key_points.size(); ++i) {
+        const cv::KeyPoint& kp = key_points[i];
+        // 访问 kp.pt, kp.size, kp.angle…
+        std::cout << "pt1=(" << kp.pt.x << "," << kp.pt.y << ")  size=" 
+                  << kp.size << "  angle=" << kp.angle << std::endl;
+    }
 
     net_ptr->run(image2, score_map2, desc_map2);
     key_points2 = nms(score_map2, 500, 0.01, 16,cv::Mat());
@@ -95,10 +102,23 @@ int main(int argc, char const *argv[])
     for (size_t i = 0; i < key_points2.size(); ++i) {
         const cv::KeyPoint& kp = key_points2[i];
         // 访问 kp.pt, kp.size, kp.angle…
-        std::cout << "pt=(" << kp.pt.x << "," << kp.pt.y << ")  size=" 
+        std::cout << "pt2=(" << kp.pt.x << "," << kp.pt.y << ")  size=" 
                   << kp.size << "  angle=" << kp.angle << std::endl;
     }
     auto end = std::chrono::system_clock::now();
+
+
+    std::ofstream ofs1("descriptors.txt");
+    ofs1 << desc2.rows << " " << desc2.cols << "\n";
+    ofs1 << std::setprecision(15);
+    for (int r = 60; r < 70; ++r) {
+        ofs1 << r;
+        for (int c = 0; c < desc2.cols; ++c) {
+            float v = desc2.at<float>(r, c);
+            ofs1 << " " << v;
+        }
+        ofs1 << "\n";
+    }
     // 4. match the key points
     std::vector<cv::DMatch> matches;
     cv::BFMatcher matcher(cv::NORM_L2, true);
@@ -136,13 +156,33 @@ int main(int argc, char const *argv[])
     for (const auto m:bad_matches) {
         cv::Point2f pt1 = key_points[m.queryIdx].pt;
         cv::Point2f pt2 = key_points2[m.trainIdx].pt;
-        cv::line(img_matches, pt1, cv::Point2f(pt2.x + IMAGE_WIDTH, pt2.y), cv::Scalar(0, 0, 255), 2);
+        //cv::line(img_matches, pt1, cv::Point2f(pt2.x + IMAGE_WIDTH, pt2.y), cv::Scalar(0, 0, 255), 2);
     }
+    int num;
     for (const auto m:good_matches) {
+        num++;
+        cv::Scalar color(
+            (unsigned) (37 * num % 255),
+            (unsigned) (17 * num % 255),
+            (unsigned) (97 * num % 255)
+        );
         cv::Point2f pt1 = key_points[m.queryIdx].pt;
         cv::Point2f pt2 = key_points2[m.trainIdx].pt;
-        cv::line(img_matches, pt1, cv::Point2f(pt2.x + IMAGE_WIDTH, pt2.y), cv::Scalar(0, 255, 0), 2);
+        cv::line(img_matches, pt1, cv::Point2f(pt2.x + IMAGE_WIDTH, pt2.y), color, 2);
     }
+
+
+
+    // std::ofstream ofs1("matches.txt");
+    // ofs1 << std::setprecision(15);
+    // for (const auto m:good_matches) {
+    //     ofs1<<m.queryIdx << " "<<m.trainIdx<<std::endl;
+
+    //}
+
+
+
+
 
     cv::imshow("matches", img_matches);
     cv::imwrite("matches.jpg", img_matches);

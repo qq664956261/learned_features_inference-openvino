@@ -46,9 +46,9 @@ Interface::Interface(std::string type, const std::string& modelPath, bool isGPU,
  */
 void Interface::run(cv::Mat &image, cv::Mat& score_map_mat, cv::Mat& descriptor_map_mat) {
     ov::element::Type input_type = ov::element::f32;
-    ov::Shape input_shape = { 1,3,400, 800 };
+    ov::Shape input_shape = { 1,3,400, 640 };
     if (grayscale) {
-        input_shape = { 1,1,400, 800 };
+        input_shape = { 1,1,400, 640 };
     }
 
      float* blob = nullptr;
@@ -131,7 +131,7 @@ void Interface::preprocessing(cv::Mat &image, float *&blob, std::vector<int64_t>
 
     // resize image to 512x512
 //    cv::resize(resizedImage, resizedImage, cv::Size(512, 512));
-    utils::letterbox(resizedImage, resizedImage, cv::Size(800, 400),
+    utils::letterbox(resizedImage, resizedImage, cv::Size(640, 400),
                       cv::Scalar(114, 114, 114), false,
                       false, true, 32);
     inputTensorShape[2] = resizedImage.rows;
